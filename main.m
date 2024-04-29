@@ -10,6 +10,11 @@ figdir= '';
 defaultPlotParameters
 %% load data
 sub = load_data_v2(datadir,'dataconf.csv');
+
+% need to flip the sign of respond
+for i = 1:length(sub)
+    sub(i).respond = -sub(i).respond;
+end
 %% ========================================================================
 %% characterize data set, participants and trials %%
 %% characterize data set, participants and trials %%
@@ -54,7 +59,7 @@ for sn = 1:length(sub)
 end
 set(ax2(1:end-1,:), 'xticklabel', [])
 set(ax2(:,2:end), 'yticklabel', [])
-set(ax, 'ylim', [-100 100])
+set(ax, 'ylim', [-180 180])
 a = add_oneExternalYLabel_v1(hg, wg, hb, wb, 90, 0.08, {'angle error, \theta_{\itt} - \alpha'});
 set(a, 'fontsize', ceil(12*sf))
 
@@ -202,7 +207,6 @@ ax = easy_gridOfEqualFigures([0.29  0.07], [0.24 0.1  0.03]);
 [b, yl, nBestFit, best_model] = plot_modelComparison(ax(2), BIC, model_name);
 
 
-
 set(ax(2), 'xticklabel', [])
 axes(ax(1)); hold on;
 Y = BIC - repmat(BIC(:,4), [1 4]);
@@ -225,6 +229,63 @@ ylabel('BIC(Model) - BIC(Hybrid)')
 addABCs(ax(1), [-0.22 0.08], 18*sf)
 addABCs(ax(2), [-0.04 0.08], 18*sf, 'B')
 saveFigurePdf(gcf, [figdir 'KF_modelComparison'])
+
+%% Print individual model
+
+% Assuming BIC is a matrix where each row corresponds to a participant 
+% and each column corresponds to a model. The value in each cell is the BIC for 
+% that participant and model.
+
+% Find the index of the best model for each participant
+[~, bestModelIndex] = min(BIC, [], 2);
+
+% Iterate over each participant to display the result in the command window
+for participant = 1:size(BIC, 1)
+    bestModelForParticipant = model_name{bestModelIndex(participant)};
+    
+    % Display the result
+    disp(['Participant ' num2str(participant) ': Best model = ' bestModelForParticipant]);
+end
+
+%% Use BIC to compute model probabilities based on BIC scores
+
+% Preallocate array for model probabilities
+modelProbabilities = zeros(size(BIC));
+
+% Calculate probabilities for each participant
+for participant = 1:size(BIC, 1)
+    % For each participant, calculate the relative likelihood of each model
+    % Negative BIC values are used because a lower BIC indicates a better model fit
+    % The exp() of the negative half BIC difference gives us the relative likelihood
+    relativeLikelihoods = exp(-0.5 * (BIC(participant,:) - min(BIC(participant,:))));
+    
+    % Normalize the relative likelihoods to sum to 1 to get probabilities
+    modelProbabilities(participant,:) = relativeLikelihoods / sum(relativeLikelihoods);
+end
+
+% Print model and probablity
+for participant = 1:size(modelProbabilities, 1)
+    % Find the index of the model with the highest probability for this participant
+    [maxProbability, maxIndex] = max(modelProbabilities(participant, :));
+    
+    % Retrieve the name of the model with the highest probability
+    bestModelName = model_name{maxIndex};
+    
+    % Print the participant number and the model with the highest probability
+    disp(['Participant ' num2str(participant) ': Model with highest probability = ' bestModelName ' (' num2str(maxProbability*100, '%.2f') '%)']);
+end
+
+
+%% Print individual model probabilities
+
+for participant = 1:size(BIC, 1)
+    % Display the model probabilities for each participant
+    disp(['Participant ' num2str(participant) ': ' num2str(modelProbabilities(participant, :), '%.2f  ')]);
+end
+
+%% FIGURE 10 - Model comparison (No changes required here)
+% Your existing code for the figure comparison can remain as is
+
 
 %% FIGURE S11 - histogram of fit parameters
 
