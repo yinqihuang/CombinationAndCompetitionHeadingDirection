@@ -2,6 +2,8 @@
 % Authors: Robert C. Wilson & Sevan K. Harootonian
 % 2021
 %% directories
+cd /Users/yinqihuang/Documents/GitHub/CombinationAndCompetitionHeadingDirection
+
 addpath([pwd,'/data'])
 addpath(genpath([pwd,'/scripts']))
 datadir = '/data/';
@@ -229,6 +231,39 @@ ylabel('BIC(Model) - BIC(Hybrid)')
 addABCs(ax(1), [-0.22 0.08], 18*sf)
 addABCs(ax(2), [-0.04 0.08], 18*sf, 'B')
 saveFigurePdf(gcf, [figdir 'KF_modelComparison'])
+
+%% Get pture
+% Preallocate arrays for pture per trial and per subject
+pture_per_trial = cell(length(sub), 1);
+pture_per_subject = zeros(length(sub), 1);
+
+% Loop through each subject
+for sn = 1:length(sub)
+    % Initialize ptrue for all trials
+    sub(sn).ptrue = zeros(length(sub(sn).trial), 1);
+
+    % Get the fitted parameters for the subject (for the model of interest)
+    omega = Xfit(sn, 9, 4); % Assuming you are using the Sampling Model (model_flag = 4)
+    
+    % Calculate ptrue for each trial based on the feedback
+    for tn = 1:length(sub(sn).trial)
+        % Example logic: You might adjust ptrue based on trial-specific feedback or other variables
+        % Replace this with your specific model logic
+        if sub(sn).FB(tn) == 1 % if it's a feedback trial
+            % ptrue might be calculated as a function of omega and the feedback
+            sub(sn).ptrue(tn) = omega * someTrialSpecificFunction(sub(sn).fb(tn), sub(sn).error(tn));
+        else
+            % For no-feedback trials, ptrue might default to a baseline or be based solely on omega
+            sub(sn).ptrue(tn) = omega;
+        end
+    end
+end
+
+% Display ptrue for each trial for each subject
+for sn = 1:length(sub)
+    fprintf('Subject %d, ptrue for each trial:\n', sn);
+    disp(sub(sn).ptrue);
+end
 
 %% Print individual model
 
