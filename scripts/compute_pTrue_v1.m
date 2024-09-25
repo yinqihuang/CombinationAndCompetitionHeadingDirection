@@ -23,3 +23,5 @@ inverse_pTrue = 1 + sqrt( s_f_rad^2 + s_0_rad^2 + s_vel_rad^2 * headAngle_feedba
     * (1-omega) / omega;
 
 p_true = 1 ./ inverse_pTrue;
+
+% pred error, with bias from esimated vel: feedback - gamma * headAngle_feedback

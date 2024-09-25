@@ -232,37 +232,31 @@ addABCs(ax(1), [-0.22 0.08], 18*sf)
 addABCs(ax(2), [-0.04 0.08], 18*sf, 'B')
 saveFigurePdf(gcf, [figdir 'KF_modelComparison'])
 
-%% Get pture
-% Preallocate arrays for pture per trial and per subject
-pture_per_trial = cell(length(sub), 1);
-pture_per_subject = zeros(length(sub), 1);
+%% Get esimated_feedback per trial 
+% pred error, with bias from esimated vel: feedback - gamma * headAngle_feedback
 
 % Loop through each subject
 for sn = 1:length(sub)
-    % Initialize ptrue for all trials
-    sub(sn).ptrue = zeros(length(sub(sn).trial), 1);
-
-    % Get the fitted parameters for the subject (for the model of interest)
-    omega = Xfit(sn, 9, 4); % Assuming you are using the Sampling Model (model_flag = 4)
+    % Extract the fitted parameters for the subject
+    g = Xfit(sn, 1);          % gain on memory of target
+    b = Xfit(sn, 2);          % bias in memory of target
+    gamma = Xfit(sn, 3);      % gain on velocity cue
     
-    % Calculate ptrue for each trial based on the feedback
-    for tn = 1:length(sub(sn).trial)
-        % Example logic: You might adjust ptrue based on trial-specific feedback or other variables
-        % Replace this with your specific model logic
-        if sub(sn).FB(tn) == 1 % if it's a feedback trial
-            % ptrue might be calculated as a function of omega and the feedback
-            sub(sn).ptrue(tn) = omega * someTrialSpecificFunction(sub(sn).fb(tn), sub(sn).error(tn));
-        else
-            % For no-feedback trials, ptrue might default to a baseline or be based solely on omega
-            sub(sn).ptrue(tn) = omega;
-        end
+    % Extract trial-wise data
+    feedback = sub(sn).fb;          % feedback values for all trials
+    headAngle_feedback = sub(sn).fb_true;   % head angle feedback for all trials
+    
+    % Initialize array to store perceived feedback for each trial
+    esimated_feedback = zeros(size(feedback));
+    
+    % Loop through each trial and compute perceived feedback
+    for trial_idx = 1:length(feedback)
+        % Compute perceived feedback for this trial
+        esimated_feedback(trial_idx) = feedback(trial_idx) - gamma * headAngle_feedback(trial_idx);
     end
-end
-
-% Display ptrue for each trial for each subject
-for sn = 1:length(sub)
-    fprintf('Subject %d, ptrue for each trial:\n', sn);
-    disp(sub(sn).ptrue);
+    
+    % Save the trial-wise perceived feedback in the subject struct
+    sub(sn).esimated_feedback = esimated_feedback;
 end
 
 %% Print individual model
