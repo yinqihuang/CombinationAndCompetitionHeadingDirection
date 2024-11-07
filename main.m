@@ -232,10 +232,9 @@ addABCs(ax(1), [-0.22 0.08], 18*sf)
 addABCs(ax(2), [-0.04 0.08], 18*sf, 'B')
 saveFigurePdf(gcf, [figdir 'KF_modelComparison'])
 
-%% Get esimated_feedback per trial 
+%% Get estimated_feedback per trial 
 % pred error, with bias from esimated vel: feedback - gamma * headAngle_feedback
 
-% Loop through each subject
 for sn = 1:length(sub)
     % Extract the fitted parameters for the subject
     g = Xfit(sn, 1);          % gain on memory of target
@@ -247,17 +246,46 @@ for sn = 1:length(sub)
     headAngle_feedback = sub(sn).fb_true;   % head angle feedback for all trials
     
     % Initialize array to store perceived feedback for each trial
-    esimated_feedback = zeros(size(feedback));
+    estimated_feedback = zeros(size(feedback));
     
     % Loop through each trial and compute perceived feedback
     for trial_idx = 1:length(feedback)
         % Compute perceived feedback for this trial
-        esimated_feedback(trial_idx) = feedback(trial_idx) - gamma * headAngle_feedback(trial_idx);
+        estimated_feedback(trial_idx) = feedback(trial_idx) - gamma * headAngle_feedback(trial_idx);
     end
     
     % Save the trial-wise perceived feedback in the subject struct
-    sub(sn).esimated_feedback = esimated_feedback;
+    sub(sn).estimated_feedback = estimated_feedback;
 end
+%%
+for sn = 1:length(sub)
+    estimated_feedback = sub(sn).estimated_feedback;
+    est = (estimated_feedback).^2;
+end
+%%
+
+% Initialize the cell array with NaN values
+fbEstimate = cell(31, 180);
+
+% Loop through each element in sub
+for sn = 1:numel(sub)
+    estimated_feedback = sub(sn).estimated_feedback; % Extract the feedback data
+    
+    % Check if the current estimated_feedback has at least 190 rows
+    if length(estimated_feedback) >= 190
+        % Extract rows 11 to 190
+        extracted_values = estimated_feedback(11:190);
+    else
+        % If less than 190 rows, pad with NaNs for the missing values
+        extracted_values = [estimated_feedback(11:end); NaN(190 - length(estimated_feedback), 1)];
+    end
+    
+    % Assign the extracted values to the corresponding cell in result
+    for col = 1:180
+        fbEstimate{sn, col} = extracted_values(col);
+    end
+end
+
 
 %% Print individual model
 
@@ -311,9 +339,6 @@ for participant = 1:size(BIC, 1)
     % Display the model probabilities for each participant
     disp(['Participant ' num2str(participant) ': ' num2str(modelProbabilities(participant, :), '%.2f  ')]);
 end
-
-%% FIGURE 10 - Model comparison (No changes required here)
-% Your existing code for the figure comparison can remain as is
 
 
 %% FIGURE S11 - histogram of fit parameters
