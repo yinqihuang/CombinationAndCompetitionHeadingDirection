@@ -17,6 +17,11 @@ sub = load_data_v2(datadir,'dataconf.csv');
 for i = 1:length(sub)
     sub(i).respond = -sub(i).respond;
 end
+
+% fb = fb + fb_true
+for i = 1:length(sub)
+    sub(i).fb = sub(i).fb + sub(i).fb_true;
+end
 %% ========================================================================
 %% characterize data set, participants and trials %%
 %% characterize data set, participants and trials %%
@@ -242,7 +247,7 @@ for sn = 1:length(sub)
     gamma = Xfit(sn, 3);      % gain on velocity cue
     
     % Extract trial-wise data
-    feedback = sub(sn).fb;          % feedback values for all trials
+    feedback = sub(sn).fb +  sub(sn).fb_true;          % update fb to fb + fb_true 
     headAngle_feedback = sub(sn).fb_true;   % head angle feedback for all trials
     
     % Initialize array to store perceived feedback for each trial
@@ -251,12 +256,13 @@ for sn = 1:length(sub)
     % Loop through each trial and compute perceived feedback
     for trial_idx = 1:length(feedback)
         % Compute perceived feedback for this trial
-        estimated_feedback(trial_idx) = feedback(trial_idx) - gamma * headAngle_feedback(trial_idx);
+        estimated_feedback(trial_idx) = feedback(trial_idx) - gamma * headAngle_feedback(trial_idx); 
     end
     
     % Save the trial-wise perceived feedback in the subject struct
     sub(sn).estimated_feedback = estimated_feedback;
 end
+
 %%
 for sn = 1:length(sub)
     estimated_feedback = sub(sn).estimated_feedback;
@@ -286,6 +292,27 @@ for sn = 1:numel(sub)
     end
 end
 
+%% Extract Kalman Gain for Kalman Filter model (model_flag = 2)
+model_flag = 2;  % Kalman Filter model
+XX = Xfit(:,:,model_flag);  % All fitted parameters
+KalmanGains = cell(length(sub),1);  % Initialize cell array
+
+for sn = 1:length(sub)
+    ind = sub(sn).FB == 1;  % Use only feedback trials
+    target = sub(sn).target(ind);
+    feedback = sub(sn).fb(ind);
+    headAngle_feedback = sub(sn).fb_true(ind);
+
+    % Compute trial-wise Kalman Gain
+    [~, ~, rho_tf] = compute_pureKalmanFilter_v1(XX(sn,:), target, feedback, headAngle_feedback);
+
+    % Save gain into struct and cell array
+    sub(sn).KalmanGain = rho_tf;
+    KalmanGains{sn} = rho_tf;
+end
+
+% Save Kalman gains to .mat file
+save('KalmanGain_KFmodel.mat', 'KalmanGains')
 
 %% Print individual model
 
@@ -403,7 +430,8 @@ ax = easy_gridOfEqualFigures([0.11 0.19 0.07], [0.12 0.13 0.04]);
 set(ax, 'fontsize', 11, 'ylim', [-100 100])
 
 % set(gcf, 'position',[440   504   468   300])
-idx = [2 30 10 25];
+% idx = [2 30 10 25];
+idx = [2 30 17 15];
 % ax = easy_gridOfEqualFigures([0.12 0.2 0.07], [0.14 0.15 0.03]);
 set(ax, 'fontsize', 10)
 for i = 1:length(ax)
@@ -476,7 +504,7 @@ saveFigurePdf(gcf, [figdir 'KF_modelVsData_all'])
 %% FIGURE 12 - implied Kalman gain with fit parameters
 model_flag = 4;
 XX = Xfit(:,:,model_flag);
-KG = nan(500,30);
+KG = nan(180,30);
 
 for sn = 1:length(sub)
     ind                 = sub(sn).FB == 1;
